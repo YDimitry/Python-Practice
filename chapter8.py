@@ -47,14 +47,10 @@
 #     [print(k) for k, v in d.items() if city in v]
 
 # ============================ Введение в Python. Практикум =============================
-game_objects = {
-    ('wall', 0): {'position': (0, 0), 'passable': False, 'interactable': False, 'char': '#'},
-    ('wall', 1): {'position': (0, 1), 'passable': False, 'interactable': False, 'char': '#'},
-    ('player',): {'position': (1, 1), 'passable': True, 'interactable': True, 'char': '@', 'coins': 0},
-    ('soft_wall', 11): {'position': (1, 4), 'passable': False, 'interactable': True, 'char': '%'},
-    ('coin', 2): {'position': (1, 2), 'passable': True, 'interactable': True, 'char': '$'}
-}
+game_objects = {}
 old_objects = []
+new_objects = []
+
 def get_objects_by_coords(position):
     return [obj for obj, prop in game_objects.items() if prop.get('position',()) == position]
 
@@ -129,31 +125,121 @@ def add_new_objects():
     for obj_name, prop, coord in new_objects:
         prop.setdefault('position', coord)
         objects = get_objects_by_coords(coord)
+        new_obj = obj_name == 'player' and ('player',) or (obj_name,get_next_counter_value())
         if objects:
             if all([game_objects[obj]['interactable'] for obj in objects]):
-                game_objects[(obj_name,get_next_counter_value())] = prop
+
+                game_objects[new_obj] = prop
         else:
-            game_objects[(obj_name,get_next_counter_value())] = prop
+            game_objects[new_obj] = prop
     new_objects.clear()
+
+obj_types_to_char = {
+    "player": "@", "wall": '#', 'soft_wall': '%', 'heatwave': '+', "bomb": '*', "coin": '$'
+}
+
+def create_object(type, position, **kwargs):
+    desc = {'position': position,
+            'passable': type not in ['wall', 'soft_wall'],
+            'interactable': type not in ['wall'],
+            'char': obj_types_to_char[type]
+            }
+    if type == 'player':
+        desc['coins'] = 0
+    if type == 'bomb':
+        desc['power'] = 3
+        desc['life_time'] = 3
+    desc.update(kwargs)
+    return type, desc, position
+
+
+def load_level(level):
+    global new_objects, game_objects
+    game_objects.clear()
+    level_lines = level.strip().splitlines()
+    for y,line in enumerate(level_lines):
+        for x, el in enumerate(line):
+            type = next((type for type, symb in obj_types_to_char.items() if el == symb), None)
+            if type:
+                new_objects += [create_object(type,(x,y))]
+    add_new_objects()
+
+
+def idle_logic(_):
+    pass
+
+def bomb_logic(bomb_object):
+    global old_objects, new_objects, game_objects
+    if game_objects[bomb_object]['life_time']:
+        game_objects[bomb_object]['life_time'] -= 1
+    else:
+        x,y = game_objects[bomb_object]['position']
+        old_objects += [bomb_object]
+        # remove_objects()
+        dx, dy = 1, 0
+        new_objects += [create_object('heatwave', (x, y))]
+        for _ in range(4):
+            if not (x-dx)<0 and not (y-dy)<0:
+                new_objects += [create_object('heatwave',(x-dx,y-dy))]
+            dx, dy = -dy, dx
+        # add_new_objects()
+
+def check_game_state():
+    global game_objects
+    coins = player = False
+    for obj in game_objects:
+        coins |= 'coin' in obj
+        player |= 'player' in obj
+    return ('lose', 'win', 'in_progress')[(coins and player)<<1|(not coins and player)]
+
+def heatwave_logic(heatwave):
+    global old_objects
+    old_objects += [heatwave]
+    # remove_objects()
+
+object_logics = {
+    'bomb': bomb_logic,
+    'heatwave': heatwave_logic
+}
+
+
+def process_objects_logic():
+    for game_object in game_objects:
+        object_logics.get(game_object[0], idle_logic)(game_object)
+
 
 game_objects = {('wall', 0): {'position': (0, 0), 'passable': False, 'interactable': False, 'char': '#'},
                 ('wall', 1): {'position': (0, 1), 'passable': False, 'interactable': False, 'char': '#'},
                 ('player',): {'position': (1, 1), 'passable': True, 'interactable': True, 'char': '@', 'coins': 0},
-                ('soft_wall', 11): {'position': (1, 4), 'passable': False, 'interactable': True, 'char': '%'}}
+                ('soft_wall', 11): {'position': (1, 4), 'passable': False, 'interactable': True, 'char': '%'},
+                # ('coin',12):{}
+                }
+#
+#
+#
+#
+# new_objects = [('bomb', {'passable': True, 'interactable': True, 'lifetime': 5}, (1, 1))]
+#
+# add_new_objects()
+#
+# print(get_objects_by_coords((1, 1)))
 
-new_objects = [('bomb', {'passable': True, 'interactable': True, 'lifetime': 5}, (1, 1))]
+level_example = """
+##########
+#@  %    #
+#   %    #
+#  %%%   #
+# %%$%%  #
+#  %%%   #
+#   %    #
+#   %    #
+#   %    #
+##########
+"""
+load_level(level_example)
 
-add_new_objects()
-
-print(get_objects_by_coords((1, 1)))
-
-
-
-
-
-
-
-
+for k,v in game_objects.items():
+    print(k,v)
 
 
 
