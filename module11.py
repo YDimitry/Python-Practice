@@ -18,9 +18,11 @@ def write_message(filename, message):
 
 # step 6
 def log(filename, message):
-    with open(filename, 'w', encoding='utf-8') as f:
+    with open(filename, 'a', encoding='utf-8') as f:
         f.write(message+'\n')
 
+# log('testfile','')
+# exit()
 # step 7
 def total_sum(filename):
     return sum(map(float, open(filename, encoding='utf-8').read().split()))
@@ -28,22 +30,26 @@ def total_sum(filename):
 
 # step 8
 def minmax_coords(filename):
-    a, b = zip(*[map(int,line.split()) for line in open(filename, encoding='utf-8').readlines()])
-    return min(a),max(a),min(b),max(b)
-
-# print(minmax_coords('testflie'))
+    a, b = list(zip(*[map(int,line.split()) for line in open(filename, encoding='utf-8').readlines()])) or (False,)*2
+    return (a and b) and (min(a),max(a),min(b),max(b)) or (None,)*4
+# print(minmax_coords('testfile'))
 
 # step 9
 # step 10
-from itertools import groupby
-from operator import itemgetter
+# from itertools import groupby
+# from operator import itemgetter
 
 def solved_tasks(filename):
     with open(filename, encoding='utf-8') as f:
-        li = [list(map(int,line.split(','))) for line in f.readlines()]
-        return {k:len({x[1] for x in v}) for k,v in groupby(li,key=itemgetter(0))}
+        d = {}
+        for line in f.readlines():
+            k,v = line.split(',')
+            d.setdefault(int(k),set()).add(int(v))
+    return {k:len(v) for k,v in d.items()}
+        # li = [list(map(int,line.split(','))) for line in f.readlines()]
+        # return {k:len({x[1] for x in v}) for k,v in groupby(li,key=itemgetter(0))}
 
-
+# print(solved_tasks('testfile'))
 # step 11
 # функция возвращает среднюю длину лепестка (petal.length)
 import pandas as pd
